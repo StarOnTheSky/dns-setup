@@ -27,4 +27,4 @@ $ ./dns-setup.py -t <token> -d <域名> -n # 非交互模式
 $ ./dns-setup.py -4 <ipv4> -6 <ipv6> -t <token> -d <域名> -n # 指定 IPv4 和 IPv6 地址
 ```
 
-*为 @KevinZonda 的 [FastGit](https://github.com/FastGitORG/nginx-conf) 项目而生*
+*为 [@KevinZonda](https://github.com/KevinZonda/) 的 [FastGit](https://github.com/FastGitORG/nginx-conf) 项目而生*
