@@ -1,7 +1,7 @@
 #!/bin/env python3
 
-# This script can help you to setup DNS records for your domain.
-# These subdomains will be used by fastgit:
+# 这个脚本可以用来设置 DNS 记录.
+# FastGit 目前需要用到的 DNS 记录有: 
 #   - example.com
 #   - hub.example.com
 #   - download.example.com
@@ -9,22 +9,22 @@
 #   - raw.example.com
 #   - assets.example.com
 
-# Prerequisites:
+# 准备工作: 
 #   - Python 3.6+
-#   - pip install dnspython
-#   - A domain that uses supported DNS provider
-#     Currently supported DNS providers (PR welcome for more providers):
+#   - pip install dnspython / sudo apt install python3-dnspython
+#   - 一个使用以下 DNS 提供商的域名: 
+#     目前支持的 DNS 提供商有（欢迎 PR）: 
 #       - Cloudflare
 #       - DigitalOcean
 #       - DNSPod
 #       - Vultr
 #       - GoDaddy
 #       - Linode
-#   - A valid API token for your DNS provider
+#   - 一个 API Token, 用于修改 DNS 记录
 
-# Usage:
+# 使用方法: 
 #   - python dns-setup.py -h|--help
-#   - python dns-setup.py -t <token> -d <domain> # Provider will be detected automatically
+#   - python dns-setup.py -t <token> -d <域名> # 例如 python dns-setup.py -t 1234567890abcdef -d example.com
 
 import argparse
 import json
@@ -82,7 +82,7 @@ def get_public_ipv4_address() -> Optional[str]:
             if s.connect_ex((addr, 80)) == 0 and s.connect_ex((addr, 443)) == 0:
                 return addr
             else:
-                print(f"Warning: Not using {addr} because it's not accessible publicly")
+                print(f"警告: 不使用这个无法公开访问的地址 {addr}")
 
         return None
 
@@ -103,7 +103,7 @@ def get_public_ipv6_address() -> Optional[str]:
             if s.connect_ex((addr, 80)) == 0 and s.connect_ex((addr, 443)) == 0:
                 return addr
             else:
-                print(f"Warning: Not using {addr} because it's not accessible publicly")
+                print(f"警告: 不使用这个无法公开访问的地址 {addr}")
         return None
 
     except requests.exceptions.RequestException:
@@ -117,7 +117,7 @@ def get_dns_records(domain: str, record_type: str) -> List[str]:
     try:
         answers = resolver.resolve(domain, record_type)
     except dns.resolver.NXDOMAIN:
-        print(f"Error: Domain {domain} not found")
+        print(f"错误: 域名 {domain} 不存在")
         sys.exit(1)
     except dns.resolver.NoAnswer:
         return []
@@ -267,10 +267,10 @@ def set_dns_records_linode(domain: str, record_type: str, record: str, token: st
         domain_id = next(domain["id"] for domain in domains if domain["domain"] == domain)
     except requests.exceptions.RequestException:
         print(response.text)
-        print("Error: Unable to get domain ID (Network error)")
+        print("错误：获取域名 ID 失败")
         sys.exit(1)
     except StopIteration:
-        print("Error: Domain not found in your Linode account")
+        print("错误：未在您的 Linode 账户中找到此域名")
         sys.exit(1)
     # Then, set the DNS records
     for subdomain in DNS_RECORDS:
@@ -294,14 +294,14 @@ def set_dns_records_linode(domain: str, record_type: str, record: str, token: st
 
 # Parse the command line arguments
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Update DNS records for a domain to work with FastGit")
+    parser = argparse.ArgumentParser(description="为部署 FastGit 项目的域名设置 DNS 记录")
     pa = parser.add_argument
-    pa("--domain", "-d", type=str, help="The domain to update")
-    pa("--token", "-t", type=str, help="The token to authenticate with the DNS provider")
-    pa("--ipv4", "-4", type=str, help="The IPv4 address to use", default=None)
-    pa("--ipv6", "-6", type=str, help="The IPv6 address to use", default=None)
-    pa("--test", action="store_true", help="Test mode, print the DNS record instead of updating it")
-    pa("--non-interactive", "-n", action="store_true", help="Non-interactive mode, do not ask for confirmation\nPlease specify the domain and token in this mode")
+    pa("--domain", "-d", type=str, help="要更新的域名")
+    pa("--token", "-t", type=str, help="DNS 提供商的 API token")
+    pa("--ipv4", "-4", type=str, help="要使用的 IPv4 地址", default=None)
+    pa("--ipv6", "-6", type=str, help="要使用的 IPv6 地址", default=None)
+    pa("--test", action="store_true", help="测试模式, 不会真正更新 DNS 记录")
+    pa("--non-interactive", "-n", action="store_true", help="非交互模式, 不会提示用户输入 \n 请确保已经正确设置了 --domain 和 --token")
     return parser.parse_args()
 
 # Main function
@@ -317,16 +317,16 @@ def main() -> None:
     # If the user didn't input arguments, ask for them
     if not domain:
         if isNonInteractive:
-            print("Error: Domain not specified")
+            print("错误: 未指定域名")
             sys.exit(1)
         else:
-            domain = input("Enter your Domain (example.com):")
+            domain = input("请输入域名: ")
     if not token:
         if isNonInteractive:
-            print("Error: Token not specified")
+            print("错误: 未指定 API token")
             sys.exit(1)
         else:
-            token = input("Enter your Token:")
+            token = input("请输入 API token: ")
 
     # Validate the domain and its name servers
     #  - Cloudflare nameservers: *.ns.cloudflare.com
@@ -362,21 +362,21 @@ def main() -> None:
         provider = "linode"
         set_dns_records = set_dns_records_linode
     else:
-        print(f"Unsupported DNS provider: {nameServers[0]}")
+        print(f"不支持的 DNS 提供商:  {nameServers[0]}")
         sys.exit(1)
-    print("Using DNS provider:", provider)
+    print("使用 DNS 提供商", provider)
 
     # Get the domain's A and AAAA records
     aRecords = get_dns_records(domain, "A")
     aaaaRecords = get_dns_records(domain, "AAAA")
     if aRecords:
-        print(f"Current A records of \"{domain}\": {aRecords}")
+        print(f"当前域名的 A 记录 \"{domain}\": {aRecords}")
         askIfChange = True
     if aaaaRecords:
-        print(f"Current AAAA records of \"{domain}\": {aaaaRecords}")
+        print(f"当前域名的 AAAA 记录\"{domain}\": {aaaaRecords}")
         askIfChange = True
     if askIfChange and not isNonInteractive:
-        if input("Do you want to change the records? [y/N]:") != "y":
+        if input("是否要更改这些记录？[y/N]:") != "y":
             sys.exit(0)
 
     # Get the IP addresses
@@ -385,16 +385,16 @@ def main() -> None:
     if ipv4 or ipv6:
         # Validate the IP addresses
         if ipv4 and not re.match(r"^(\d{1,3}\.){3}\d{1,3}$", ipv4):
-            print(f"Invalid IPv4 address: {ipv4}")
+            print(f"无效的地址:  {ipv4}")
             sys.exit(1)
         else:
-            print(f"Using IPv4 address from command line argument: {ipv4}")
+            print(f"使用命令行指定的地址:  {ipv4}")
 
         if ipv6 and not re.match(r"^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$", ipv6):
-            print(f"Invalid IPv6 address: {ipv6}")
+            print(f"无效的地址:  {ipv6}")
             sys.exit(1)
         else:
-            print(f"Using IPv6 address from command line argument: {ipv6}")
+            print(f"使用命令行指定的地址:  {ipv6}")
 
     # Second, try to get the IP addresses from the local network interfaces
     else:
@@ -402,7 +402,7 @@ def main() -> None:
         ipv4 = get_local_ipv4_address()
         ipv6 = get_local_ipv6_address()
         if ipv4 or ipv6:
-            print("Using IP addresses from local network interfaces:")
+            print("使用本地网络接口的地址: ")
             if ipv4:
                 print(f"IPv4: {ipv4}")
             if ipv6:
@@ -413,7 +413,7 @@ def main() -> None:
         ipv4 = get_public_ipv4_address()
         ipv6 = get_public_ipv6_address()
         if ipv4 or ipv6:
-            print("Using IP addresses detected from the Internet:")
+            print("使用公共 IP 地址: ")
             if ipv4:
                 print(f"IPv4: {ipv4}")
             if ipv6:
@@ -421,12 +421,12 @@ def main() -> None:
     
     # If no IP addresses were found, exit
     if not ipv4 and not ipv6:
-        print("No usable public IP addresses found")
+        print("未找到 IP 地址")
         sys.exit(1)
     
     # Ask the user to confirm the IP addresses
     if not isNonInteractive:
-        if input("Do you want to use these IP addresses? [y/N]:") != "y":
+        if input("是否使用这些 IP 地址？[y/N]:") != "y":
             sys.exit(0)
 
     # Update the domain's A and AAAA records
@@ -436,7 +436,7 @@ def main() -> None:
         if ipv6:
             set_dns_records(domain, "AAAA", ipv6, token)
     else:
-        print("Test mode, no changes were made")
+        print("测试模式, 不会更新 DNS 记录")
 
     '''
     # Wait for the DNS records to propagate
@@ -451,7 +451,7 @@ def main() -> None:
     if aaaaRecords:
         print(f"New AAAA records of \"{domain}\": {aaaaRecords}")
     '''
-    print("Done! Wait a few minutes for the changes to propagate.")
+    print("更新完成, 请等待几分钟后 DNS 记录生效")
 
 
 if __name__ == "__main__":
