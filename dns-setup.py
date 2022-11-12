@@ -369,6 +369,7 @@ def main() -> None:
     # Get the domain's A and AAAA records
     aRecords = get_dns_records(domain, "A")
     aaaaRecords = get_dns_records(domain, "AAAA")
+    askIfChange = False
     if aRecords:
         print(f"Current A records of \"{domain}\": {aRecords}")
         askIfChange = True
