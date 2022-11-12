@@ -410,7 +410,7 @@ def main() -> None:
                 print(f"IPv6: {ipv6}")
     
     # Third, try to get the public IP addresses from the Internet
-    if not ipv4 or not ipv6:
+    if not ipv4 and not ipv6:
         ipv4 = get_public_ipv4_address()
         ipv6 = get_public_ipv6_address()
         if ipv4 or ipv6:
